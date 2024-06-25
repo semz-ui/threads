@@ -35,9 +35,11 @@ const getUserProfile = async (req, res) => {
 const signupUser = async (req, res) => {
   try {
     const { name, email, username, password } = req.body;
+    if (!name || !email || !username || !password)
+      return res.status(400).json({ error: "Please input all fields" });
     const user = await User.findOne({ $or: [{ email }, { username }] });
     if (user) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ error: "User already exists" });
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -58,10 +60,10 @@ const signupUser = async (req, res) => {
         // token:newUser.token
       });
     } else {
-      return res.status(400).json({ message: "Invalid user data" });
+      return res.status(400).json({ error: "Invalid user data" });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -70,13 +72,13 @@ const loginUser = async (req, res) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(400).json({ message: "User does not exist" });
+      return res.status(400).json({ error: "User does not exist" });
     }
     const isPasswordCorrest = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrest) {
       return res
         .status(400)
-        .json({ message: "Invalid password please try again" });
+        .json({ error: "Invalid password please try again" });
     }
     generateTokenAndSetCookie(user._id, res);
     res.status(200).json({
@@ -86,7 +88,7 @@ const loginUser = async (req, res) => {
       username: user.username,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -95,7 +97,7 @@ const logoutUser = async (req, res) => {
     res.cookie("jwt", "", { maxAge: 1 });
     res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -104,18 +106,17 @@ const followUnfollowUser = async (req, res) => {
     const { id } = await req.params;
     const userId = req.user._id;
     console.log(userId.toString());
-    console.log(IDBRequest);
     const userToModify = await User.findById(id);
 
     const currentUser = await User.findById(req.user._id);
 
     if (id === userId.toString())
       return res.status(400).json({
-        message: "You cannot follow yourself",
+        error: "You cannot follow yourself",
       });
 
     if (!userToModify || !currentUser)
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({ error: "User not found" });
 
     const isFollowing = currentUser.following.includes(id);
 
@@ -133,7 +134,7 @@ const followUnfollowUser = async (req, res) => {
       });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -147,7 +148,7 @@ const updateUser = async (req, res) => {
     if (!user) return res.status(400).json({ message: "User does not exist" });
     if (req.params.id !== userId.toString())
       return res.status(400).json({
-        message: "You cannot update other users profile",
+        error: "You cannot update other users profile",
       });
     if (password) {
       const salt = await bcrypt.genSalt(10);
@@ -167,7 +168,7 @@ const updateUser = async (req, res) => {
       .status(200)
       .json({ message: "Profile Updated successfully", user: user });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ error: error.message });
   }
 };
 
